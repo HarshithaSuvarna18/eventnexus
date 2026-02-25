@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | EventNexus</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="description" content="Next-Gen College Event Registration & Check-in System">
+</head>
+
+<body>
+    <header>
+        <a href="index.html" class="logo">EventNexus</a>
+        <nav class="nav-links">
+            <a href="index.html">Register</a>
+            <a href="checkin.html">Check-in</a>
+            <a href="dashboard.html">Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div style="width: 100%; max-width: 1000px;">
+            <h1 class="title" style="text-align: left; margin-bottom: 30px;">Event Overview</h1>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3 id="stat-total">0</h3>
+                    <p class="subtitle" style="margin:0">Total Registrations</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-checked">0</h3>
+                    <p class="subtitle" style="margin:0">Checked In</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-percent">0%</h3>
+                    <p class="subtitle" style="margin:0">Attendance Rate</p>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <h2 style="margin-bottom: 20px;">Recent Activity</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Student ID</th>
+                            <th>Event</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script>
+        async function loadStats() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/stats`);
+                const data = await res.json();
+
+                document.getElementById('stat-total').innerText = data.total;
+                document.getElementById('stat-checked').innerText = data.checked_in;
+                document.getElementById('stat-percent').innerText = data.total > 0 ?
+                    Math.round((data.checked_in / data.total) * 100) + '%' : '0%';
+
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+
+                data.recent.forEach(attendee => {
+                    const tr = document.createElement('tr');
+
+                    const badgeClass = attendee.checked_in ? 'check-in' : 'pending';
+                    const badgeText = attendee.checked_in ? 'In Event' : 'Pending';
+
+                    tr.innerHTML = `
+                    <td><strong>${attendee.name}</strong><br><small style="color:var(--text-muted)">${attendee.email}</small></td>
+                    <td>${attendee.student_id}</td>
+                    <td>${attendee.event}</td>
+                    <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Failed to load stats", err);
+            }
+        }
+
+        // Load initially and refresh every 5 seconds
+        loadStats();
+        setInterval(loadStats, 5000);
+    </script>
+</body>
+
+</html>
