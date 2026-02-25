@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-In Control | EventNexus</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="description" content="Next-Gen College Event Registration & Check-in System">
+    <!-- HTML5 QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+    <header>
+        <a href="index.html" class="logo">EventNexus</a>
+        <nav class="nav-links">
+            <a href="index.html">Register</a>
+            <a href="checkin.html">Check-in</a>
+            <a href="dashboard.html">Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="glass-card scanner-box">
+            <h1 class="title">Express Check-in</h1>
+            <p class="subtitle">Scan participant QR codes at the entrance.</p>
+
+            <div id="reader"></div>
+
+            <div id="scan-result"></div>
+        </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script>
+        let isScanning = true;
+        const resultDiv = document.getElementById('scan-result');
+
+        function showResult(message, isSuccess) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = isSuccess ? 'success' : 'error';
+            resultDiv.innerText = message;
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            if (!isScanning) return;
+            isScanning = false;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/checkin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticket_id: decodedText })
+                });
+                const data = await res.json();
+
+                showResult(data.message, data.success);
+            } catch (err) {
+                showResult("Network error. Please try again.", false);
+            }
+
+            // Allow next scan after 2 seconds
+            setTimeout(() => {
+                isScanning = true;
+            }, 2000);
+        }
+
+        function onScanFailure(error) {
+            // handle scan failure, usually better to ignore and keep scanning
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        /* verbose= */ false);
+
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    </script>
+</body>
+
+</html>
