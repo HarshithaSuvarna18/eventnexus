@@ -17,7 +17,7 @@ CORS(app)
 
 # Connect to MongoDB Atlas
 # Default to localhost for local testing if MONGO_URI is not set
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/eventnexus")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://eventadmin:nha@2006@cluster0.eduo8lt.mongodb.net/eventnexus?appName=Cluster0")
 client = MongoClient(MONGO_URI)
 
 # Get the default database (or specify eventnexus if you want)
@@ -32,6 +32,11 @@ def api_register():
     student_id = data.get('student_id')
     event = data.get('event', 'Main Event')
     
+    # Check if this email has already registered for this specific event
+    existing_attendee = attendees_collection.find_one({"email": email, "event": event})
+    if existing_attendee:
+        return jsonify({"success": False, "error": f"Email {email} is already registered for {event}."}), 400
+        
     ticket_id = str(uuid.uuid4())
     
     attendee = {
@@ -108,6 +113,39 @@ def api_stats():
         "total": total,
         "checked_in": checked_in,
         "recent": recent
+    })
+
+@app.route('/api/export')
+def api_export():
+    import csv
+    
+    # Get all attendees
+    cursor = attendees_collection.find({})
+    
+    # Create an in-memory string buffer
+    si = io.StringIO()
+    cw = csv.writer(si)
+    
+    # Write the header row
+    cw.writerow(["Name", "Email", "Student ID", "Event", "Checked In"])
+    
+    # Write the data rows
+    for row in cursor:
+        checked_in_status = "Yes" if row.get('checked_in') == 1 else "No"
+        cw.writerow([
+            row.get('name', ''), 
+            row.get('email', ''), 
+            row.get('student_id', ''), 
+            row.get('event', ''), 
+            checked_in_status
+        ])
+        
+    output = si.getvalue()
+    si.close()
+    
+    return jsonify({
+        "success": True,
+        "csv_data": output
     })
 
 @app.route('/', methods=['GET'])
